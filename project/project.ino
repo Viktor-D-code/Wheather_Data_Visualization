@@ -16,8 +16,8 @@
 
 
 // ——— Wi-Fi credentials —————————————————————————————————
-const char* ssid     = "BTH_Guest";
-const char* password = "SAAB15Struts";
+const char* ssid     = "";
+const char* password = "";
 
 // ——— TFT setup ——————————————————————————————————————
 TFT_eSPI tft = TFT_eSPI();
@@ -54,10 +54,10 @@ const char* paramNames[NUM_PARAMS] = { "Temperature", "Windspeed", "Humidity" };
 const char* paramCodes[NUM_PARAMS] = { "t", "ws", "r" };
 const char* paramUnits[NUM_PARAMS] = { "°C", " m/s", "%" };
 
-static const int histParamID[NUM_PARAMS]   = { 1, 4, 6 };    // 1=Temp, 4=Wind speed, 7=Rel. humidity
+static const int histParamID[NUM_PARAMS]   = { 1, 4, 6 };    // 1=Temp, 4=Wind speed, 7=Rel. humidity//
 // Indexed as histStationID[city][param]
 static const int histStationID[NUM_CITIES][NUM_PARAMS] = {
-  { 98230, 98210, 98230 },  // Stockholm: temp, wind, humidity
+  { 98230, 98210, 98230 },  // Stockholm: temp, wind, humidity //
   { 52350, 52350, 52350 },  
   { 71420, 71420, 71420 }   
 };
@@ -75,7 +75,7 @@ int settingsMode = 0;  // 0=pick city, 1=pick param
 bool prevB1 = false;
 bool prevB2 = false;
 
-// both-button “hold to menu” detector
+// both-button “hold to menu” "detector"
 bool   bothPressed       = false;
 bool   bothMenuTriggered = false;
 unsigned long bothPressStart = 0;
@@ -84,7 +84,7 @@ const unsigned long BOTH_PRESS_THRESHOLD = 500;  // ms hold to open menu
 // HISTORIK scroll timing for BTN2
 unsigned long b2PressTime = 0;
 bool          b2LongHandled = false;
-const unsigned long LONG_PRESS_MS = 800;  // ms to register BTN2 long-press
+const unsigned long LONG_PRESS_MS = 800;  // ms for BTN2 (long-press)
 
 
 Preferences prefs;
@@ -103,8 +103,8 @@ const char* histUrls[NUM_CITIES] = {
 };
 
 // — history-view state —————————————————————————
-bool  hist7Days      = true;    // true=7d window; false=1d window
-int   histOffsetDays = 0;       // how many days back from “most recent”
+bool  hist7Days      = true;    // true=7d window; false=1d window //
+int   histOffsetDays = 0;       // how many days back from “most recent” //
 
 
 
@@ -157,7 +157,7 @@ void connectWiFi() {
   while(WiFi.status()!=WL_CONNECTED){
     delay(500);
     tft.fillScreen(TFT_BLACK);
-    tft.drawString("Ansluter WiFi...",10,10);
+    tft.drawString("Connecting to WI-FI...",10,10);
   }
 }
 
@@ -193,8 +193,6 @@ char* fetchSMHIData(bool historical=false) {
     + "/period/latest-months/data.json";
 
   }
-
-  Serial.println("Fetching: " + url);  // for debug
 
   tft.fillScreen(TFT_BLACK);
   tft.drawString("Loading data...",10,10);
@@ -338,7 +336,7 @@ void drawHistorikGraph(JsonArray arr, int startIdx, int count) {
   const int GW = tft.width()  - 40;
   const int GH = tft.height() - 60;
 
-  // 1) find min/max
+  // 1 find min/max
   float minv =  1e6, maxv = -1e6;
   for (int i = 0; i < count; i++) {
     float v = arr[startIdx + i]["value"].as<float>();  // <- correct here
@@ -350,18 +348,18 @@ void drawHistorikGraph(JsonArray arr, int startIdx, int count) {
     maxv += 1;
   }
 
-  // 2) clear only the graph box
+  // 2 clear only the graph box
   tft.fillRect(GX+1, GY+1, GW-1, GH-1, TFT_BLACK);
   tft.drawRect(GX, GY, GW, GH, TFT_WHITE);
 
-  // 3) draw Y-axis labels at x=2 so you actually see them
+  // 3 draw Y-axis labels at x=2 
   tft.setTextSize(1);
   String topLbl = String(maxv, 1) + paramUnits[selectedParam];
   String botLbl = String(minv, 1) + paramUnits[selectedParam];
   tft.drawString(topLbl, 2, GY - 6);
   tft.drawString(botLbl, 2, GY + GH - 6);
 
-  // 4) plot the line
+  // 4 plot the line
   int px = -1, py = -1;
   for (int i = 0; i < count; i++) {
     float v = arr[startIdx + i]["value"].as<float>();  // <- and here
@@ -450,7 +448,7 @@ void handleButtons() {
       bothPressed = true;
       bothStart   = millis();
     }
-    // while both are down, do nothing else
+    // while both buttons are down, do nothing else
     return;
   }
   // on release after hold
@@ -528,7 +526,7 @@ void handleButtons() {
   }
   prev1 = b1;
 
-  // 3) BTN2 long vs short on release for HISTORIK scroll
+  // 3) BTN2 long vs short on release for HISTORIK to scroll throught the days
   static bool          prev2 = HIGH;
   static unsigned long down2 = 0;
 
