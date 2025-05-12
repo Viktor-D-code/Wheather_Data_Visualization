@@ -15,38 +15,38 @@
 
 
 
-// ——— Wi-Fi credentials —————————————————————————————————
+// Wi-Fi credentials 
 const char* ssid     = "";
 const char* password = "";
 
-// ——— TFT setup ——————————————————————————————————————
+// TFT setup 
 TFT_eSPI tft = TFT_eSPI();
 
-// ——— Buttons ——————————————————————————————————————
+//  Buttons 
 #define BTN1 0
 #define BTN2 14
 
-// ——— App state —————————————————————————————————————
-enum ScreenState { BOOT, FORECAST, MENU, SETTINGS, HISTORIK };
-ScreenState currentScreen = BOOT;
+// App state 
+enum Screenstate { BOOT, FORECAST, MENU, SETTINGS, HISTORIK };
+Screenstate currentScreen = BOOT;
 
 const char* programVersion = "v1.0.0";
 const char* teamNumber     = "Team 3";
 
 
-// — menu —————————————————————————————————————————
+// menu 
 int  menuIdx = 0;
 const int MENU_OPTS = 4;
 const char* menuItems[MENU_OPTS] = { "Forecast", "Historical", "Settings", "Reset" };
 
 
-// — cities ———————————————————————————————————————
+// cities 
 enum City { STOCKHOLM=0, MALMO=1, GOTHENBURG=2 };
 City selectedCity = STOCKHOLM;
 const int NUM_CITIES = 3;
 const char* cityNames[NUM_CITIES] = { "Stockholm", "Malmo", "Gothenburg" };
 
-// — parameters —————————————————————————————————————
+// parameters 
 enum Param { TEMP=0, WIND=1, HUM=2 };
 Param selectedParam = TEMP;
 const int NUM_PARAMS = 3;
@@ -54,28 +54,28 @@ const char* paramNames[NUM_PARAMS] = { "Temperature", "Windspeed", "Humidity" };
 const char* paramCodes[NUM_PARAMS] = { "t", "ws", "r" };
 const char* paramUnits[NUM_PARAMS] = { "°C", " m/s", "%" };
 
-static const int histParamID[NUM_PARAMS]   = { 1, 4, 6 };    // 1=Temp, 4=Wind speed, 7=Rel. humidity//
+static const int histParamID[NUM_PARAMS]   = { 1, 4, 6 };    // 1=Temp, 4=Wind speed, 7=Rel. humidity
 // Indexed as histStationID[city][param]
 static const int histStationID[NUM_CITIES][NUM_PARAMS] = {
-  { 98230, 98210, 98230 },  // Stockholm: temp, wind, humidity //
+  { 98230, 98210, 98230 },  // Stockholm: temp, wind, humidity
   { 52350, 52350, 52350 },  
   { 71420, 71420, 71420 }   
 };
 
 
-// — settings submenu —————————————————————————————
+// settings submenu 
 int settingsMode = 0;  // 0=pick city, 1=pick param
 
 
-// ──────────────────────────────────────────────────────────────
-// Button-state & timing globals 
-// ──────────────────────────────────────────────────────────────
+
+// Button-state & timing globals //
+
 
 // raw button debounces
 bool prevB1 = false;
 bool prevB2 = false;
 
-// both-button “hold to menu” "detector"
+// both-button “hold to menu” detector
 bool   bothPressed       = false;
 bool   bothMenuTriggered = false;
 unsigned long bothPressStart = 0;
@@ -84,7 +84,7 @@ const unsigned long BOTH_PRESS_THRESHOLD = 500;  // ms hold to open menu
 // HISTORIK scroll timing for BTN2
 unsigned long b2PressTime = 0;
 bool          b2LongHandled = false;
-const unsigned long LONG_PRESS_MS = 800;  // ms for BTN2 (long-press)
+const unsigned long LONG_PRESS_MS = 800;  // ms to register BTN2 long-press
 
 
 Preferences prefs;
@@ -102,16 +102,15 @@ const char* histUrls[NUM_CITIES] = {
   "https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/71420/period/latest-months/data.json"
 };
 
-// — history-view state —————————————————————————
-bool  hist7Days      = true;    // true=7d window; false=1d window //
-int   histOffsetDays = 0;       // how many days back from “most recent” //
+// history-view state //
+bool  hist_7_Days      = true;    // true=7d window; false=1d window
+int   hist_Off_set_Days = 0;       // how many days back from “most recent”
 
 
+// ICONS //
 
-// ──────────────── ICONS ──────────────────────────────────
-
-// SUN //
-void drawSun(int x,int y) {
+// SUN 
+void Sun(int x,int y) {
   tft.fillCircle(x,y,3,TFT_WHITE);
   for(int i=0;i<8;i++){
     float a=i*(PI/4);
@@ -119,8 +118,8 @@ void drawSun(int x,int y) {
   }
 }
 
-//Cloud//
-void drawCloud(int x,int y) {
+//Cloud
+void Cloud(int x,int y) {
   tft.fillRect(x-6,y,12,4,TFT_WHITE);
   tft.fillCircle(x-4,y,3,TFT_WHITE);
   tft.fillCircle(x,y-2,3,TFT_WHITE);
@@ -128,36 +127,36 @@ void drawCloud(int x,int y) {
 }
 
 //Cloud with rain//
-void drawRain(int x,int y) {
-  drawCloud(x,y-1);
+void Rain(int x,int y) {
+  Cloud(x,y-1);
   for(int dx=-3;dx<=3;dx+=3)
     tft.drawLine(x+dx,y+4, x+dx,y+8, TFT_WHITE);
 }
 
-//Thunder//
-void drawThunder(int x,int y) {
-  drawCloud(x,y-1);
+//Thunder
+void Thunder(int x,int y) {
+  Cloud(x,y-1);
   int px1[] = {x, x-2, x+1}, py1[] = {y+2,y+8,y+8};
   tft.fillTriangle(px1[0],py1[0], px1[1],py1[1], px1[2],py1[2], TFT_WHITE);
   int px2[] = {x+1,x-1,x+3}, py2[] = {y+8,y+14,y+5};
   tft.fillTriangle(px2[0],py2[0], px2[1],py2[1], px2[2],py2[2], TFT_WHITE);
 }
 
-//Snow//
-void drawSnow(int x,int y) {
+//Snow
+void Snow(int x,int y) {
   for(int i=0;i<6;i++){
     float a=i*(PI/3);
     tft.drawLine(x,y, x+cos(a)*6, y+sin(a)*6, TFT_WHITE);
   }
 }
 
-// ──────────────── UTILITIES ──────────────────────────────
+// UTILITIES //
 void connectWiFi() {
   WiFi.begin(ssid,password);
   while(WiFi.status()!=WL_CONNECTED){
     delay(500);
     tft.fillScreen(TFT_BLACK);
-    tft.drawString("Connecting to WI-FI...",10,10);
+    tft.drawString("Ansluter WiFi...",10,10);
   }
 }
 
@@ -194,6 +193,8 @@ char* fetchSMHIData(bool historical=false) {
 
   }
 
+  Serial.println("Fetching: " + url);  // for debug
+
   tft.fillScreen(TFT_BLACK);
   tft.drawString("Loading data...",10,10);
 
@@ -221,8 +222,8 @@ char* fetchSMHIData(bool historical=false) {
 }
 
 
-// ──────────────── FORECAST ───────────────────────────────
-void showForecast(char* json) {
+// FORECAST //
+void Forecast(char* json) {
   if(!json){
     tft.fillScreen(TFT_BLACK);
     tft.drawString("HTTP FEL",10,10);
@@ -262,18 +263,18 @@ void showForecast(char* json) {
     int ix=x+tft.textWidth(txt)+8,
         iy=y+(tft.fontHeight()/2)-1;
     switch(sym){
-      case 1: case 2: case 3: case 4: drawSun(ix,iy);    break;
-      case 5: case 6: case 7:           drawCloud(ix,iy);  break;
-      case 8: case 9: case 10:          drawRain(ix,iy);   break;
-      case 11:                          drawThunder(ix,iy);break;
-      case 12: case 13: case 14:        drawSnow(ix,iy);   break;
+      case 1: case 2: case 3: case 4: Sun(ix,iy);    break;
+      case 5: case 6: case 7:           Cloud(ix,iy);  break;
+      case 8: case 9: case 10:          Rain(ix,iy);   break;
+      case 11:                          Thunder(ix,iy);break;
+      case 12: case 13: case 14:        Snow(ix,iy);   break;
     }
   }
   tft.setTextSize(2);
 }
 
-// ──────────────── HISTORY GRAPH ──────────────────────────
-void showHistorik(char* json) {
+// HISTORY GRAPH //
+void Historik(char* json) {
   if (!json) {
     tft.fillScreen(TFT_BLACK);
     tft.setTextSize(2);
@@ -310,36 +311,36 @@ void showHistorik(char* json) {
     return;
   }
 
-  int window = hist7Days ? 168 : 24;
+  int window = hist_7_Days ? 168 : 24;
   window = min(window, total);
   int maxOffset = (total - window) / 24;
-  histOffsetDays = constrain(histOffsetDays, 0, maxOffset);
+  hist_Off_set_Days = constrain(hist_Off_set_Days, 0, maxOffset);
 
-  int startIdx = total - window - histOffsetDays * 24;
+  int startIdx = total - window - hist_Off_set_Days * 24;
   startIdx = max(0, startIdx);
 
   // Text in the corner in history //
   tft.fillScreen(TFT_BLACK);
   tft.setTextSize(1);
   tft.setTextColor(TFT_WHITE);
-  String mode = hist7Days ? "Mode: 7d" : "Mode: 1d";
+  String mode = hist_7_Days ? "Mode: 7d" : "Mode: 1d";
   tft.drawString(mode, tft.width() - tft.textWidth(mode) - 5, 10);
   String legend = "B2 short=<-  long=->";
   tft.drawString(legend, tft.width() - tft.textWidth(legend) - 5, 22);
 
   // plot
-  drawHistorikGraph(vals, startIdx, window);
+  HistorikGraph(vals, startIdx, window);
 }
 
-void drawHistorikGraph(JsonArray arr, int startIdx, int count) {
+void HistorikGraph(JsonArray arr, int startIdx, int count) {
   const int GX = 20, GY = 40;
   const int GW = tft.width()  - 40;
   const int GH = tft.height() - 60;
 
-  // 1 find min/max
+  // 1) find min/max
   float minv =  1e6, maxv = -1e6;
   for (int i = 0; i < count; i++) {
-    float v = arr[startIdx + i]["value"].as<float>();  // <- correct here
+    float v = arr[startIdx + i]["value"].as<float>();  
     minv = min(minv, v);
     maxv = max(maxv, v);
   }
@@ -348,21 +349,21 @@ void drawHistorikGraph(JsonArray arr, int startIdx, int count) {
     maxv += 1;
   }
 
-  // 2 clear only the graph box
+  // 2) clear only the graph box
   tft.fillRect(GX+1, GY+1, GW-1, GH-1, TFT_BLACK);
   tft.drawRect(GX, GY, GW, GH, TFT_WHITE);
 
-  // 3 draw Y-axis labels at x=2 
+  // 3) draw Y-axis labels at x=2 
   tft.setTextSize(1);
   String topLbl = String(maxv, 1) + paramUnits[selectedParam];
   String botLbl = String(minv, 1) + paramUnits[selectedParam];
   tft.drawString(topLbl, 2, GY - 6);
   tft.drawString(botLbl, 2, GY + GH - 6);
 
-  // 4 plot the line
+  // 4) plot the line
   int px = -1, py = -1;
   for (int i = 0; i < count; i++) {
-    float v = arr[startIdx + i]["value"].as<float>();  // <- and here
+    float v = arr[startIdx + i]["value"].as<float>();  
     int x = GX + (GW * i) / (count - 1);
     int y = GY + GH - int((v - minv) / (maxv - minv) * GH);
     if (i > 0) {
@@ -373,8 +374,8 @@ void drawHistorikGraph(JsonArray arr, int startIdx, int count) {
   }
 }
 
-// ──────────────── MENU & SETTINGS ───────────────────────
-void drawMenu(){
+// MENU & SETTINGS //
+void Menu_lay_out(){
   tft.fillScreen(TFT_BLACK);
   tft.drawString("MENY",10,10);
   for(int i=0;i<MENU_OPTS;i++){
@@ -384,7 +385,7 @@ void drawMenu(){
   tft.setTextColor(TFT_WHITE);
 }
 
-void drawSettings(){
+void Settings_option(){
   tft.fillScreen(TFT_BLACK);
   tft.setTextSize(1);
   tft.drawString("Settings",10,10);
@@ -405,8 +406,8 @@ void drawSettings(){
   tft.setTextSize(2);
 }
 
-// ──────────────── SCREEN ROUTER ─────────────────────────
-void updateScreen(){
+// SCREEN ROUTER //
+void Start_Screen(){
   tft.setTextSize(2);
   tft.setTextColor(TFT_WHITE);
   switch(currentScreen){
@@ -417,25 +418,25 @@ void updateScreen(){
       tft.drawString("Team: "+String(teamNumber),10,70);
       delay(2000);
       currentScreen=FORECAST;
-      updateScreen();
+      Start_Screen();
       break;
     case FORECAST:
-      showForecast(fetchSMHIData(false));
+      Forecast(fetchSMHIData(false));
       break;
     case MENU:
-      drawMenu();
+      Menu_lay_out();
       break;
     case SETTINGS:
-      drawSettings();
+      Settings_option();
       break;
     case HISTORIK:
-      showHistorik(fetchSMHIData(true));
+      Historik(fetchSMHIData(true));
       break;
   }
 }
 
-// ──────────────── BUTTON HANDLING ───────────────────────
-void handleButtons() {
+// BUTTON HANDLING //
+void handle_buttons() {
   bool b1 = (digitalRead(BTN1) == LOW);
   bool b2 = (digitalRead(BTN2) == LOW);
 
@@ -448,7 +449,7 @@ void handleButtons() {
       bothPressed = true;
       bothStart   = millis();
     }
-    // while both buttons are down, do nothing else
+    // while both are down, do nothing else
     return;
   }
   // on release after hold
@@ -456,7 +457,7 @@ void handleButtons() {
     bothPressed = false;
     if (millis() - bothStart >= BOTH_PRESS_THRESHOLD) {
       currentScreen = MENU;
-      updateScreen();
+      Start_Screen();
       
       return;
     }
@@ -467,23 +468,23 @@ void handleButtons() {
   static bool prev1 = HIGH;
   if (!b1 && prev1) {
     if (currentScreen == HISTORIK) {
-      hist7Days      = !hist7Days;
-      histOffsetDays = 0;
-      updateScreen();
+      hist_7_Days      = !hist_7_Days;
+      hist_Off_set_Days = 0;
+      Start_Screen();
     }
     else if (currentScreen == MENU) {
   if      (menuIdx == 0) {
     currentScreen = FORECAST;
-    updateScreen();
+    Start_Screen();
   }
   else if (menuIdx == 1) {
     currentScreen = HISTORIK;
-    updateScreen();
+    Start_Screen();
   }
   else if (menuIdx == 2) {
     currentScreen = SETTINGS;
     settingsMode = 0;
-    updateScreen();
+    Start_Screen();
   }
   else {
     // RESET option selected
@@ -501,7 +502,7 @@ void handleButtons() {
     delay(2000);
 
     currentScreen = MENU;
-    updateScreen();
+    Start_Screen();
   }
 }
 
@@ -509,24 +510,24 @@ void handleButtons() {
     else if (currentScreen == SETTINGS) {
       if (settingsMode == 0) {
         settingsMode = 1;
-        drawSettings();
+        Settings_option();
       } else {
         prefs.begin("cfg", false);
         prefs.putUInt("city",  (uint32_t)selectedCity);
         prefs.putUInt("param", (uint32_t)selectedParam);
         prefs.end();
         currentScreen = MENU;
-        updateScreen();
+        Start_Screen();
       }
     }
     else {
       currentScreen = MENU;
-      updateScreen();
+      Start_Screen();
     }
   }
   prev1 = b1;
 
-  // 3) BTN2 long vs short on release for HISTORIK to scroll throught the days
+  // 3) BTN2 long vs short on release for HISTORIK scroll
   static bool          prev2 = HIGH;
   static unsigned long down2 = 0;
 
@@ -538,23 +539,23 @@ void handleButtons() {
     if (currentScreen == HISTORIK) {
       if (held >= LONG_PRESS_MS) {
         // forward one day
-        histOffsetDays = max(0, histOffsetDays - 1);
+        hist_Off_set_Days = max(0, hist_Off_set_Days - 1);
       } else {
         // backward one day
-        histOffsetDays = histOffsetDays + 1;
+        hist_Off_set_Days = hist_Off_set_Days + 1;
       }
-      updateScreen();
+      Start_Screen();
     }
     else if (currentScreen == MENU) {
       menuIdx = (menuIdx + 1) % MENU_OPTS;
-      drawMenu();
+      Menu_lay_out();
     }
     else if (currentScreen == SETTINGS) {
       if (settingsMode == 0)
         selectedCity = City((selectedCity + 1) % NUM_CITIES);
       else
         selectedParam = Param((selectedParam + 1) % NUM_PARAMS);
-      drawSettings();
+      Settings_option();
     }
   }
   prev2 = b2;
@@ -572,11 +573,11 @@ void setup(){
   prefs.end();
 
   connectWiFi();
-  updateScreen();
+  Start_Screen();
 }
 
 void loop(){
-  handleButtons();
+  handle_buttons();
   delay(50);
 }
 
