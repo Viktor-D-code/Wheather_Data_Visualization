@@ -440,7 +440,7 @@ void handle_buttons() {
   bool b1 = (digitalRead(BTN1) == LOW);
   bool b2 = (digitalRead(BTN2) == LOW);
 
-  // 1) BOTH-BUTTON “hold and release” to get MENU
+  //BOTH-BUTTON “hold and release” to get MENU
   static bool  bothPressed = false;
   static unsigned long bothStart = 0;
   
@@ -464,7 +464,7 @@ void handle_buttons() {
     // else, fall through to single-button logic
   }
 
-  // 2) BTN1 short-press on release
+  // BTN1 short-press on release
   static bool prev1 = HIGH;
   if (!b1 && prev1) {
     if (currentScreen == HISTORIK) {
@@ -527,7 +527,7 @@ void handle_buttons() {
   }
   prev1 = b1;
 
-  // 3) BTN2 long vs short on release for HISTORIK scroll
+  //BTN2 long vs short on release for HISTORIK scroll
   static bool          prev2 = HIGH;
   static unsigned long down2 = 0;
 
